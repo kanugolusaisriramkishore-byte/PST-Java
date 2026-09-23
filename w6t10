@@ -1,0 +1,368 @@
+import java.io.*;
+import java.util.*;
+
+public class Solution {
+
+    static class Update {
+        int left;
+        int right;
+        int type;
+        long value;
+
+        Update(int left, int right, int type, long value) {
+            this.left = left;
+            this.right = right;
+            this.type = type;
+            this.value = value;
+        }
+    }
+
+    // Manacher's algorithm - odd length palindromes
+    static int[] manacherOdd(String s) {
+        int n = s.length();
+        int[] d = new int[n];
+
+        int l = 0, r = -1;
+
+        for (int i = 0; i < n; i++) {
+            int k = (i > r) ? 1 : Math.min(d[l + r - i], r - i + 1);
+
+            while (i - k >= 0 &&
+                   i + k < n &&
+                   s.charAt(i - k) == s.charAt(i + k)) {
+                k++;
+            }
+
+            d[i] = k;
+            k--;
+
+            if (i + k > r) {
+                l = i - k;
+                r = i + k;
+            }
+        }
+
+        return d;
+    }
+
+    // Manacher's algorithm - even length palindromes
+    static int[] manacherEven(String s) {
+        int n = s.length();
+        int[] d = new int[n];
+
+        int l = 0, r = -1;
+
+        for (int i = 0; i < n; i++) {
+            int k = (i > r)
+                    ? 0
+                    : Math.min(d[l + r - i + 1], r - i + 1);
+
+            while (i - k - 1 >= 0 &&
+                   i + k < n &&
+                   s.charAt(i - k - 1) == s.charAt(i + k)) {
+                k++;
+            }
+
+            d[i] = k;
+            k--;
+
+            if (i + k > r) {
+                l = i - k - 1;
+                r = i + k;
+            }
+        }
+
+        return d;
+    }
+
+    static void addUpdate(
+            ArrayList<Update>[] updates,
+            int l,
+            int r,
+            int type,
+            long value,
+            int n) {
+
+        l = Math.max(l, 0);
+        r = Math.min(r, n - 1);
+
+        if (l <= r) {
+            updates[l].add(new Update(l, r, type, value));
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        BufferedReader br =
+                new BufferedReader(new InputStreamReader(System.in));
+
+        int n = Integer.parseInt(br.readLine().trim());
+        String s = br.readLine().trim();
+
+        String doubled = s + s;
+
+        int[] odd = manacherOdd(doubled);
+        int[] even = manacherEven(doubled);
+
+        @SuppressWarnings("unchecked")
+        ArrayList<Update>[] updates = new ArrayList[n];
+
+        for (int i = 0; i < n; i++) {
+            updates[i] = new ArrayList<>();
+        }
+
+        /*
+         * type 0 -> increasing function
+         * type 1 -> constant function
+         * type 2 -> decreasing function
+         */
+
+        // ---------------------------------------------------------
+        // Odd length palindromes
+        // ---------------------------------------------------------
+
+        for (int c = 0; c < 2 * n; c++) {
+
+            int radius = Math.min(odd[c], (n + 1) / 2);
+
+            if (radius == 0) {
+                continue;
+            }
+
+            int low = c - n + 1;
+            int high = c;
+
+            int a = c + radius - n;
+            int b = c - radius + 1;
+
+            if (a <= b) {
+
+                // Increasing part
+                addUpdate(
+                        updates,
+                        low,
+                        a,
+                        0,
+                        2L * n - 2L * c - 1,
+                        n
+                );
+
+                // Constant part
+                addUpdate(
+                        updates,
+                        a,
+                        b,
+                        1,
+                        2L * radius - 1,
+                        n
+                );
+
+                // Decreasing part
+                addUpdate(
+                        updates,
+                        b,
+                        high,
+                        2,
+                        2L * c + 1,
+                        n
+                );
+
+            } else {
+
+                /*
+                 * The palindrome is longer than the rotation.
+                 * Therefore the two sides of the rotation determine
+                 * the maximum palindrome.
+                 */
+
+                int mid = (2 * c - n + 1) / 2;
+
+                // Increasing
+                addUpdate(
+                        updates,
+                        low,
+                        mid,
+                        0,
+                        2L * n - 2L * c - 1,
+                        n
+                );
+
+                // Decreasing
+                addUpdate(
+                        updates,
+                        mid + 1,
+                        high,
+                        2,
+                        2L * c + 1,
+                        n
+                );
+            }
+        }
+
+        // ---------------------------------------------------------
+        // Even length palindromes
+        // ---------------------------------------------------------
+
+        for (int c = 0; c < 2 * n; c++) {
+
+            int radius = Math.min(even[c], n / 2);
+
+            if (radius == 0) {
+                continue;
+            }
+
+            int low = c - n + 1;
+            int high = c;
+
+            int a = c + radius - n;
+            int b = c - radius;
+
+            if (a <= b) {
+
+                // Increasing part
+                addUpdate(
+                        updates,
+                        low,
+                        a,
+                        0,
+                        2L * n - 2L * c,
+                        n
+                );
+
+                // Constant part
+                addUpdate(
+                        updates,
+                        a,
+                        b,
+                        1,
+                        2L * radius,
+                        n
+                );
+
+                // Decreasing part
+                addUpdate(
+                        updates,
+                        b + 1,
+                        high,
+                        2,
+                        2L * c,
+                        n
+                );
+
+            } else {
+
+                int mid = (2 * c - n) / 2;
+
+                // Increasing
+                addUpdate(
+                        updates,
+                        low,
+                        mid,
+                        0,
+                        2L * n - 2L * c,
+                        n
+                );
+
+                // Decreasing
+                addUpdate(
+                        updates,
+                        mid + 1,
+                        high,
+                        2,
+                        2L * c,
+                        n
+                );
+            }
+        }
+
+        // ---------------------------------------------------------
+        // Process all rotations
+        // ---------------------------------------------------------
+
+        /*
+         * Three priority queues:
+         *
+         * increasing:  2*k + constant
+         * constant:    constant
+         * decreasing: -2*k + constant
+         */
+
+        PriorityQueue<Update> increasing =
+                new PriorityQueue<>(
+                        (a, b) -> Long.compare(b.value, a.value)
+                );
+
+        PriorityQueue<Update> constant =
+                new PriorityQueue<>(
+                        (a, b) -> Long.compare(b.value, a.value)
+                );
+
+        PriorityQueue<Update> decreasing =
+                new PriorityQueue<>(
+                        (a, b) -> Long.compare(b.value, a.value)
+                );
+
+        StringBuilder output = new StringBuilder();
+
+        for (int k = 0; k < n; k++) {
+
+            for (Update u : updates[k]) {
+
+                if (u.type == 0) {
+                    increasing.add(u);
+                } else if (u.type == 1) {
+                    constant.add(u);
+                } else {
+                    decreasing.add(u);
+                }
+            }
+
+            // Remove expired updates
+            while (!increasing.isEmpty()
+                    && increasing.peek().right < k) {
+                increasing.poll();
+            }
+
+            while (!constant.isEmpty()
+                    && constant.peek().right < k) {
+                constant.poll();
+            }
+
+            while (!decreasing.isEmpty()
+                    && decreasing.peek().right < k) {
+                decreasing.poll();
+            }
+
+            long best = 1;
+
+            if (!increasing.isEmpty()) {
+                Update u = increasing.peek();
+
+                best = Math.max(
+                        best,
+                        2L * k + u.value
+                );
+            }
+
+            if (!constant.isEmpty()) {
+                best = Math.max(
+                        best,
+                        constant.peek().value
+                );
+            }
+
+            if (!decreasing.isEmpty()) {
+                Update u = decreasing.peek();
+
+                best = Math.max(
+                        best,
+                        -2L * k + u.value
+                );
+            }
+
+            output.append(best).append('\n');
+        }
+
+        System.out.print(output);
+    }
+}
